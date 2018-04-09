@@ -55,6 +55,8 @@ void MDCallback(void *cbData, const char *type, bool isUnicode, const char *stri
   }
   Serial.printf("'\n");
   Serial.flush();
+
+
 }
 
 
@@ -148,15 +150,7 @@ DisplayTime();
       {
          if (!mp3->loop()) 
             {
-            mp3->stop();
-            
-            file = new AudioFileSourceSPIFFS("/pno-cs.mp3");
-            id3 = new AudioFileSourceID3(file);
-            id3->RegisterMetadataCB(MDCallback, (void*)"ID3TAG");
-            out = new AudioOutputI2SNoDAC();
-            mp3 = new AudioGeneratorMP3(); 
-        //    ESP.restart();                                // перезагружаем модуль
-        
+        OpenMuz();
             }
       } 
 
@@ -165,18 +159,13 @@ DisplayTime();
     flagkey=1;
     if (mp3->isRunning())   
       {
-      mp3->stop();
-      file = new AudioFileSourceSPIFFS("/pno-cs.mp3");
-      id3 = new AudioFileSourceID3(file);
-      id3->RegisterMetadataCB(MDCallback, (void*)"ID3TAG");
-      out = new AudioOutputI2SNoDAC();
-      mp3 = new AudioGeneratorMP3(); 
+        OpenMuz();
       }
   }
   
   if (flagkey) 
     {
-      if(millis()-dotTime > 100) {
+      if(millis()-dotTime > 20) {
         dotTime = millis();
         if (s > 0)
           {
@@ -201,8 +190,8 @@ DisplayTime();
 
 // =======================================================================
 
-void DisplayTime(){
-    //updateTime();
+void DisplayTime()
+{
     matrix.fillScreen(LOW);
     int y = (matrix.height() - 8) / 2; // Центрируем текст по Вертикали
 
@@ -222,9 +211,39 @@ void DisplayTime(){
     matrix.drawChar(xs, y, sec1[0], HIGH, LOW, 1);
     matrix.drawChar(xs+6, y, sec2[0], HIGH, LOW, 1);  
 
-
   
     matrix.write(); // Вывод на дисплей
 }
 
 // =======================================================================
+
+void OpenMuz()
+{
+
+  Serial.print(" Stop              FreeHeap - " );
+  Serial.println(ESP.getFreeHeap() );
+                
+            mp3->stop();
+            id3->close();
+            file->close();
+            delete mp3;
+            delete id3;
+            delete file;
+            delete out;
+            mp3 = NULL;
+            id3 = NULL;
+            file = NULL;
+            out = NULL;
+      
+            file = new AudioFileSourceSPIFFS("/pno-cs.mp3");
+            id3 = new AudioFileSourceID3(file);
+            id3->RegisterMetadataCB(MDCallback, (void*)"ID3TAG");
+            out = new AudioOutputI2SNoDAC();
+            mp3 = new AudioGeneratorMP3(); 
+        //    ESP.restart();                                // перезагружаем модуль
+
+  Serial.print("               FreeHeap - " );
+  Serial.println(ESP.getFreeHeap() );
+
+}
+
