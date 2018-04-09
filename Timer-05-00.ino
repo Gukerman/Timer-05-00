@@ -4,6 +4,9 @@ NodeMCU    -> Matrix
 MOSI-D7-GPIO13  -> DIN
 CLK-D5-GPIO14   -> Clk
 GPIO0-D3        -> LOAD
+
+key=5; //define key D1 & GND
+Rx - in amplifaer 
 */
 
 
@@ -139,24 +142,23 @@ int s = 0;
 // =======================================================================
 void loop(void) {
 
+DisplayTime();
+
     if (mp3->isRunning())   
       {
-
-     if (!mp3->loop()) 
-    {
-    mp3->stop();
-    
-    file = new AudioFileSourceSPIFFS("/pno-cs.mp3");
-    id3 = new AudioFileSourceID3(file);
-    id3->RegisterMetadataCB(MDCallback, (void*)"ID3TAG");
-    out = new AudioOutputI2SNoDAC();
-    mp3 = new AudioGeneratorMP3(); 
-//    ESP.restart();                                // перезагружаем модуль
-
-    }
+         if (!mp3->loop()) 
+            {
+            mp3->stop();
+            
+            file = new AudioFileSourceSPIFFS("/pno-cs.mp3");
+            id3 = new AudioFileSourceID3(file);
+            id3->RegisterMetadataCB(MDCallback, (void*)"ID3TAG");
+            out = new AudioOutputI2SNoDAC();
+            mp3 = new AudioGeneratorMP3(); 
+        //    ESP.restart();                                // перезагружаем модуль
+        
+            }
       } 
-
-DisplayTime();
 
   if (digitalRead(key)==LOW) 
   {
@@ -192,7 +194,6 @@ DisplayTime();
               m = t;
               s = 0;
               mp3->begin(id3, out);
-
             }
         }
     }
@@ -227,38 +228,3 @@ void DisplayTime(){
 }
 
 // =======================================================================
-
-
-
-String utf8rus(String source)
-{
-  int i,k;
-  String target;
-  unsigned char n;
-  char m[2] = { '0', '\0' };
-
-  k = source.length(); i = 0;
-
-  while (i < k) {
-    n = source[i]; i++;
-
-    if (n >= 0xC0) {
-      switch (n) {
-        case 0xD0: {
-          n = source[i]; i++;
-          if (n == 0x81) { n = 0xA8; break; }
-          if (n >= 0x90 && n <= 0xBF) n = n + 0x30-1;
-          break;
-        }
-        case 0xD1: {
-          n = source[i]; i++;
-          if (n == 0x91) { n = 0xB8; break; }
-          if (n >= 0x80 && n <= 0x8F) n = n + 0x70-1;
-          break;
-        }
-      }
-    }
-    m[0] = n; target = target + String(m);
-  }
-return target;
-}
