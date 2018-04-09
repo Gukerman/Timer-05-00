@@ -6,6 +6,7 @@ CLK-D5-GPIO14   -> Clk
 GPIO0-D3        -> LOAD
 */
 
+
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <SPI.h>
@@ -13,7 +14,49 @@ GPIO0-D3        -> LOAD
 #include <Max72xxPanel.h>
 #include <ArduinoJson.h>
 
-#define t 1;  // сколько минут минуты
+#include <Arduino.h>
+#include "AudioFileSourceSPIFFS.h"
+#include "AudioFileSourceID3.h"
+#include "AudioGeneratorMP3.h"
+#include "AudioOutputI2SNoDAC.h"
+
+
+// To run, set your ESP8266 build to 160MHz, and include a SPIFFS of 512KB or greater.
+// Use the "Tools->ESP8266/ESP32 Sketch Data Upload" menu to write the MP3 to SPIFFS
+// Then upload the sketch normally.  
+
+// pno_cs from https://ccrma.stanford.edu/~jos/pasp/Sound_Examples.html
+
+AudioGeneratorMP3 *mp3;
+AudioFileSourceSPIFFS *file;
+AudioOutputI2SNoDAC *out;
+AudioFileSourceID3 *id3;
+
+
+// Called when a metadata event occurs (i.e. an ID3 tag, an ICY block, etc.
+void MDCallback(void *cbData, const char *type, bool isUnicode, const char *string)
+{
+  (void)cbData;
+  Serial.printf("ID3 callback for: %s = '", type);
+
+  if (isUnicode) {
+    string += 2;
+  }
+  
+  while (*string) {
+    char a = *(string++);
+    if (isUnicode) {
+      string++;
+    }
+    Serial.printf("%c", a);
+  }
+  Serial.printf("'\n");
+  Serial.flush();
+}
+
+
+
+#define t 1;  // сколько минут таймер
 
 String weatherMain = "";
 String weatherDescription = "";
@@ -34,6 +77,7 @@ int offset=1,refresh=0;
 int pinCS = 0; // Подключение пина CS
 int numberOfHorizontalDisplays = 4; // Количество светодиодных матриц по Горизонтали
 int numberOfVerticalDisplays = 1; // Количество светодиодных матриц по Вертикали
+
 String decodedMsg;
 Max72xxPanel matrix = Max72xxPanel(pinCS, numberOfHorizontalDisplays, numberOfVerticalDisplays);
 //matrix.cp437(true);
@@ -41,19 +85,31 @@ Max72xxPanel matrix = Max72xxPanel(pinCS, numberOfHorizontalDisplays, numberOfVe
 int spacer = 2;
 int width = 5 + spacer; // Регулируем расстояние между символами
 
-int key=2; //define key D4
+int key=5; //define key D1
 int buzzer = 4; //D2 объявляем переменную с номером пина, на который мы подключили пьезоэлемент
-bool flag = 0;
+bool flagkey = 0;
 
 
 void setup(void) {
 
+  Serial.begin(115200);                           // Дебаг
+  WiFi.mode(WIFI_OFF); 
+  delay(1000);
+
+  SPIFFS.begin();
+  Serial.printf("Sample MP3 playback begins...\n");
+
+  file = new AudioFileSourceSPIFFS("/pno-cs.mp3");
+  id3 = new AudioFileSourceID3(file);
+  id3->RegisterMetadataCB(MDCallback, (void*)"ID3TAG");
+  out = new AudioOutputI2SNoDAC();
+  mp3 = new AudioGeneratorMP3();
+              
+  
   pinMode(key,INPUT_PULLUP);
   pinMode(buzzer, OUTPUT); //объявляем пин как выход
   
 matrix.setIntensity(0); // Яркость матрицы от 0 до 15
-
-
 
 
 // начальные координаты матриц 8*8
@@ -61,11 +117,6 @@ matrix.setIntensity(0); // Яркость матрицы от 0 до 15
   matrix.setRotation(1, 1);        // 2 матрица
   matrix.setRotation(2, 1);        // 3 матрица
   matrix.setRotation(3, 1);        // 4 матрица
-
-
-  Serial.begin(115200);                           // Дебаг
-
-
 
 }
 
@@ -83,13 +134,36 @@ int dy=0;
 byte del=0;
 int m = t;
 int s = 0;
+
+
 // =======================================================================
 void loop(void) {
 
+    if (mp3->isRunning())   
+      {
+
+     if (!mp3->loop()) 
+    {
+    mp3->stop();
+    
+    file = new AudioFileSourceSPIFFS("/pno-cs.mp3");
+    id3 = new AudioFileSourceID3(file);
+    id3->RegisterMetadataCB(MDCallback, (void*)"ID3TAG");
+    out = new AudioOutputI2SNoDAC();
+    mp3 = new AudioGeneratorMP3(); 
+//    ESP.restart();                                // перезагружаем модуль
+
+    }
+      } 
+
 DisplayTime();
 
-  if (digitalRead(key)==LOW) {flag=1;}
-  if (flag) 
+  if (digitalRead(key)==LOW) 
+  {
+    flagkey=1;
+  }
+  
+  if (flagkey) 
     {
       if(millis()-dotTime > 100) {
         dotTime = millis();
@@ -105,18 +179,18 @@ DisplayTime();
             }
           else 
             {
-              flag=0;
+              flagkey=0;
               m = t;
               s = 0;
-              tone(buzzer, 500); //включаем на 500 Гц
-              delay(1000); //ждем 1000 Мс
-              tone(buzzer, 0); //включаем на 500 Гц
+              mp3->begin(id3, out);
+
             }
         }
     }
 }
 
 // =======================================================================
+
 void DisplayTime(){
     //updateTime();
     matrix.fillScreen(LOW);
@@ -144,21 +218,6 @@ void DisplayTime(){
 }
 
 // =======================================================================
-void DisplayText(String text){
-    matrix.fillScreen(LOW);
-    for (int i=0; i<text.length(); i++){
-    
-    int letter =(matrix.width())- i * (width-1);
-    int x = (matrix.width() +1) -letter;
-    int y = (matrix.height() - 8) / 2; // Центрируем текст по Вертикали
-    matrix.drawChar(x, y, text[i], HIGH, LOW, 1);
-    matrix.write(); // Вывод на дисплей
-    
-    }
-
-}
-
-
 
 
 
