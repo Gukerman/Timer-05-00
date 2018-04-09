@@ -161,6 +161,15 @@ DisplayTime();
   if (digitalRead(key)==LOW) 
   {
     flagkey=1;
+    if (mp3->isRunning())   
+      {
+      mp3->stop();
+      file = new AudioFileSourceSPIFFS("/pno-cs.mp3");
+      id3 = new AudioFileSourceID3(file);
+      id3->RegisterMetadataCB(MDCallback, (void*)"ID3TAG");
+      out = new AudioOutputI2SNoDAC();
+      mp3 = new AudioGeneratorMP3(); 
+      }
   }
   
   if (flagkey) 
