@@ -63,19 +63,6 @@ void MDCallback(void *cbData, const char *type, bool isUnicode, const char *stri
 
 #define t 1;  // сколько минут таймер
 
-String weatherMain = "";
-String weatherDescription = "";
-String weatherLocation = "";
-String country;
-int humidity;
-int pressure;
-float temp;
-float tempMin, tempMax;
-int clouds;
-float windSpeed;
-String date;
-String currencyRates;
-String weatherString;
 
 long period;
 int offset=1,refresh=0;
@@ -91,11 +78,16 @@ int spacer = 2;
 int width = 5 + spacer; // Регулируем расстояние между символами
 
 int key=5; //define key D1
-int buzzer = 4; //D2 объявляем переменную с номером пина, на который мы подключили пьезоэлемент
+int buzzer = 3; //Rx объявляем переменную с номером пина, на который мы подключили динамик
 bool flagkey = 0;
 
 
 void setup(void) {
+
+  pinMode(key,INPUT_PULLUP);
+  pinMode(buzzer, OUTPUT); //объявляем пин как выход
+  digitalWrite(buzzer,LOW);
+
 
   Serial.begin(115200);                           // Дебаг
   WiFi.mode(WIFI_OFF); 
@@ -108,12 +100,8 @@ void setup(void) {
   id3 = new AudioFileSourceID3(file);
   id3->RegisterMetadataCB(MDCallback, (void*)"ID3TAG");
   out = new AudioOutputI2SNoDAC();
-  mp3 = new AudioGeneratorMP3();
-              
-  
-  pinMode(key,INPUT_PULLUP);
-  pinMode(buzzer, OUTPUT); //объявляем пин как выход
-  
+  mp3 = new AudioGeneratorMP3(); 
+
 matrix.setIntensity(0); // Яркость матрицы от 0 до 15
 
 
@@ -145,21 +133,31 @@ int s = 0;
 void loop(void) {
 
 DisplayTime();
+    
+    if (mp3==NULL)
 
-    if (mp3->isRunning())   
-      {
-         if (!mp3->loop()) 
-            {
-        OpenMuz();
-            }
+      {  digitalWrite(buzzer,LOW);
+       Serial.println(" buzzer  LOW " );
       } 
-
+    else 
+      {
+          if (mp3->isRunning())   
+            {
+               if (!mp3->loop()) 
+                  {
+              StopMuz();
+                  }
+            }
+      }
+    
   if (digitalRead(key)==LOW) 
   {
     flagkey=1;
+    m = t;
+    s = 0;
     if (mp3->isRunning())   
       {
-        OpenMuz();
+        StopMuz();
       }
   }
   
@@ -182,7 +180,7 @@ DisplayTime();
               flagkey=0;
               m = t;
               s = 0;
-              mp3->begin(id3, out);
+              PlayMuz();
             }
         }
     }
@@ -217,7 +215,7 @@ void DisplayTime()
 
 // =======================================================================
 
-void OpenMuz()
+void StopMuz()
 {
 
   Serial.print(" Stop              FreeHeap - " );
@@ -240,10 +238,18 @@ void OpenMuz()
             id3->RegisterMetadataCB(MDCallback, (void*)"ID3TAG");
             out = new AudioOutputI2SNoDAC();
             mp3 = new AudioGeneratorMP3(); 
-        //    ESP.restart();                                // перезагружаем модуль
+            
+            
+     //    ESP.restart();                                // перезагружаем модуль
 
   Serial.print("               FreeHeap - " );
   Serial.println(ESP.getFreeHeap() );
 
 }
+
+void PlayMuz()
+{
+  mp3->begin(id3, out);
+}
+
 
