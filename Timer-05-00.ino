@@ -6,7 +6,7 @@ CLK-D5-GPIO14   -> Clk
 GPIO0-D3        -> LOAD
 
 key=5; //define key D1 & GND
-Rx - in amplifaer 
+Rx - in amplifaer gpio3
 */
 
 
@@ -134,21 +134,13 @@ void loop(void) {
 
 DisplayTime();
     
-    if (mp3==NULL)
-
-      {  digitalWrite(buzzer,LOW);
-       Serial.println(" buzzer  LOW " );
-      } 
-    else 
-      {
-          if (mp3->isRunning())   
-            {
-               if (!mp3->loop()) 
-                  {
-              StopMuz();
-                  }
-            }
-      }
+  if (mp3->isRunning())   
+    {
+       if (!mp3->loop()) 
+          {
+      StopMuz();
+          }
+    }
     
   if (digitalRead(key)==LOW) 
   {
@@ -192,7 +184,6 @@ void DisplayTime()
 {
     matrix.fillScreen(LOW);
     int y = (matrix.height() - 8) / 2; // Центрируем текст по Вертикали
-
     
     if(s & 1){matrix.drawChar(14, y, (String(" "))[0], HIGH, LOW, 1);} //каждую четную секунду печатаем двоеточие по центру (чтобы мигало)
     else{matrix.drawChar(14, y, (String(":"))[0], HIGH, LOW, 1);}
@@ -209,7 +200,6 @@ void DisplayTime()
     matrix.drawChar(xs, y, sec1[0], HIGH, LOW, 1);
     matrix.drawChar(xs+6, y, sec2[0], HIGH, LOW, 1);  
 
-  
     matrix.write(); // Вывод на дисплей
 }
 
@@ -217,7 +207,6 @@ void DisplayTime()
 
 void StopMuz()
 {
-
   Serial.print(" Stop              FreeHeap - " );
   Serial.println(ESP.getFreeHeap() );
                 
@@ -242,7 +231,7 @@ void StopMuz()
             
      //    ESP.restart();                                // перезагружаем модуль
 
-  Serial.print("               FreeHeap - " );
+  Serial.print(" Play              FreeHeap - " );
   Serial.println(ESP.getFreeHeap() );
 
 }
