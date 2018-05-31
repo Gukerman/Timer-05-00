@@ -61,7 +61,7 @@ void MDCallback(void *cbData, const char *type, bool isUnicode, const char *stri
 
 
 
-#define t 1;  // сколько минут таймер
+#define t 3;  // сколько минут таймер
 
 
 long period;
@@ -102,7 +102,7 @@ void setup(void) {
   out = new AudioOutputI2SNoDAC();
   mp3 = new AudioGeneratorMP3(); 
 
-matrix.setIntensity(0); // Яркость матрицы от 0 до 15
+matrix.setIntensity(12); // Яркость матрицы от 0 до 15
 
 
 // начальные координаты матриц 8*8
@@ -155,7 +155,7 @@ DisplayTime();
   
   if (flagkey) 
     {
-      if(millis()-dotTime > 20) {
+      if(millis()-dotTime > 1000) {
         dotTime = millis();
         if (s > 0)
           {
